@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 use std::str::FromStr;
 
+use miette::Error;
+
 advent_of_code::solution!(5);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,6 +81,38 @@ impl Update {
         true
     }
 
+    fn update_to_satisfy_rules(&mut self, rules: &Vec<Rule>) -> Result<(), Error> {
+        let filtered_rules: Vec<&Rule> = rules
+            .iter()
+            .filter(|rule| self.pages.contains(&rule.before) && self.pages.contains(&rule.after))
+            .collect();
+
+        let mut swapped = true;
+        while swapped {
+            swapped = false;
+            for rule in &filtered_rules {
+                let before_idx = self
+                    .pages
+                    .iter()
+                    .position(|&page| page == rule.before)
+                    .unwrap();
+
+                let after_idx = self
+                    .pages
+                    .iter()
+                    .position(|&page| page == rule.after)
+                    .unwrap();
+
+                if after_idx < before_idx {
+                    self.pages.swap(before_idx, after_idx);
+                    swapped = true;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     fn middle_page(&self) -> Option<&PageNumber> {
         let num_pages = self.pages.len();
         self.pages.iter().nth(num_pages / 2)
@@ -123,7 +157,21 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let (rules, updates) = parse_input(input).ok()?;
+
+    let result: u32 = updates
+        .into_iter()
+        .filter(|update| !update.satisfies_rules(&rules))
+        .map(|mut update| {
+            update
+                .update_to_satisfy_rules(&rules)
+                .expect("Failed to update");
+
+            update.middle_page().unwrap().0
+        })
+        .sum();
+
+    Some(result)
 }
 
 #[cfg(test)]
@@ -139,6 +187,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(123));
     }
 }
