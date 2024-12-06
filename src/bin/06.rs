@@ -12,7 +12,7 @@ enum Position {
     Guard,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Direction {
     North,
     East,
@@ -93,12 +93,12 @@ impl Debug for Map {
         }
 
         writeln!(f)?;
-        for row in self.visited_positions.iter() {
-            for &visited in row.iter() {
-                write!(f, "{}", if visited { "X" } else { "." })?;
-            }
-            writeln!(f)?;
-        }
+        // for row in self.visited_positions.iter() {
+        //     for &visited in row.iter() {
+        //         write!(f, "{}", if visited { "X" } else { "." })?;
+        //     }
+        //     writeln!(f)?;
+        // }
 
         writeln!(f, "Guard position: {:?}", self.guard_position)?;
         writeln!(f, "Guard direction: {:?}", self.guard_direction)?;
@@ -118,6 +118,30 @@ impl Map {
             Direction::South => Direction::West,
             Direction::West => Direction::North,
         }
+    }
+
+    fn simulate_plain(&mut self) -> Result<(), Error> {
+        loop {
+            self.visited_positions[self.guard_position.1][self.guard_position.0] = true;
+            match self.position_in_front_of_guard() {
+                None => break,
+                Some(Position::Blocked) => {
+                    self.turn_right();
+                }
+                Some(Position::Empty) => {
+                    self.guard_position = match self.guard_direction {
+                        Direction::North => (self.guard_position.0, self.guard_position.1 - 1),
+                        Direction::East => (self.guard_position.0 + 1, self.guard_position.1),
+                        Direction::South => (self.guard_position.0, self.guard_position.1 + 1),
+                        Direction::West => (self.guard_position.0 - 1, self.guard_position.1),
+                    };
+                }
+                Some(Position::Guard) => {
+                    panic!("Guard should never be in front of guard");
+                }
+            }
+        }
+        Ok(())
     }
 
     fn position_in_front_of_guard(&self) -> Option<Position> {
@@ -161,37 +185,74 @@ impl Map {
             .filter(|&&visited| visited)
             .count()
     }
+
+    // Insert a blocked position into the provided position, then run the simulation
+    // If we end up in a square we've been to before, then return true
+    // If we end up going off the map, then false
+    fn will_loop(&mut self) -> bool {
+        let mut seen: Vec<((usize, usize), Direction)> = Vec::new();
+        loop {
+            // check if we've been here before
+            if seen.contains(&(self.guard_position, self.guard_direction)) {
+                return true;
+            }
+            match self.position_in_front_of_guard() {
+                None => break,
+                Some(Position::Blocked) => {
+                    seen.push((self.guard_position, self.guard_direction));
+                    self.turn_right();
+                }
+                Some(Position::Empty) => {
+                    self.guard_position = match self.guard_direction {
+                        Direction::North => (self.guard_position.0, self.guard_position.1 - 1),
+                        Direction::East => (self.guard_position.0 + 1, self.guard_position.1),
+                        Direction::South => (self.guard_position.0, self.guard_position.1 + 1),
+                        Direction::West => (self.guard_position.0 - 1, self.guard_position.1),
+                    };
+                }
+                Some(Position::Guard) => {
+                    panic!("Guard should never be in front of guard");
+                }
+            }
+        }
+
+        false
+    }
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
     let mut map = input.parse::<Map>().unwrap();
-    dbg!(&map);
-
-    loop {
-        map.visited_positions[map.guard_position.1][map.guard_position.0] = true;
-        match map.position_in_front_of_guard() {
-            None => break,
-            Some(Position::Blocked) => {
-                map.turn_right();
-            }
-            Some(Position::Empty) => {
-                map.guard_position = match map.guard_direction {
-                    Direction::North => (map.guard_position.0, map.guard_position.1 - 1),
-                    Direction::East => (map.guard_position.0 + 1, map.guard_position.1),
-                    Direction::South => (map.guard_position.0, map.guard_position.1 + 1),
-                    Direction::West => (map.guard_position.0 - 1, map.guard_position.1),
-                };
-            }
-            Some(Position::Guard) => {
-                panic!("Guard should never be in front of guard");
-            }
-        }
-    }
+    map.simulate_plain().unwrap();
     Some(map.count_visited_positions() as u32)
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let mut map = input.parse::<Map>().unwrap();
+    map.simulate_plain().unwrap();
+
+    let mut looping_count = 0;
+
+    let mut maps_to_test: Vec<Map> = Vec::with_capacity(map.count_visited_positions());
+
+    for (j, line) in map.visited_positions.iter().enumerate() {
+        for (i, pos) in line.iter().enumerate() {
+            if !pos {
+                continue;
+            }
+
+            let mut test_map = input.parse::<Map>().unwrap();
+            test_map.positions[j][i] = Position::Blocked;
+            maps_to_test.push(test_map);
+        }
+    }
+
+    for mut test_map in maps_to_test {
+        if test_map.will_loop() {
+            looping_count += 1;
+        }
+    }
+
+    Some(looping_count as u32)
 }
 
 #[cfg(test)]
@@ -207,6 +268,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(6));
     }
 }
