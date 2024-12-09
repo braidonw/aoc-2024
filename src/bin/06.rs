@@ -93,12 +93,6 @@ impl Debug for Map {
         }
 
         writeln!(f)?;
-        // for row in self.visited_positions.iter() {
-        //     for &visited in row.iter() {
-        //         write!(f, "{}", if visited { "X" } else { "." })?;
-        //     }
-        //     writeln!(f)?;
-        // }
 
         writeln!(f, "Guard position: {:?}", self.guard_position)?;
         writeln!(f, "Guard direction: {:?}", self.guard_direction)?;
