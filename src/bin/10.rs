@@ -1,8 +1,4 @@
-use std::{
-    collections::{BTreeSet, HashSet, VecDeque},
-    env::consts::OS,
-    fmt::Debug,
-};
+use std::{collections::HashSet, fmt::Debug};
 
 advent_of_code::solution!(10);
 
@@ -42,9 +38,6 @@ struct TrailMap {
     positions: Vec<Vec<Position>>,
     trailheads: Vec<Position>,
 }
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-struct Trail([Position; 10]);
 
 impl Debug for TrailMap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -136,7 +129,6 @@ impl TrailMap {
     fn find_distinct_trails(&self, trailhead: &Position) -> u32 {
         let mut trails: HashSet<Vec<Position>> = HashSet::new();
 
-        let mut visited: HashSet<Position> = HashSet::new();
         let mut stack: Vec<Vec<Position>> = Vec::new();
         stack.push(vec![*trailhead]);
 
@@ -153,7 +145,6 @@ impl TrailMap {
                     if next.height > current_pos.height && next.height - 1 == current_pos.height {
                         let mut new_path = current_path.clone();
                         new_path.push(next);
-                        visited.insert(next);
                         stack.push(new_path);
                     }
                 }

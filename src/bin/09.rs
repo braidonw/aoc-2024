@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use miette::Error;
 
 advent_of_code::solution!(9);
