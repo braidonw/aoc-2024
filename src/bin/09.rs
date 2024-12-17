@@ -128,7 +128,6 @@ pub fn part_one(input: &str) -> Option<u32> {
     let _ = compress(&mut blocks);
 
     let checksum = blocks.checksum().expect("Failed to calculate checksum");
-    dbg!(&checksum);
 
     Some(checksum as u32)
 }
@@ -188,7 +187,6 @@ pub fn part_two(input: &str) -> Option<u32> {
             total += (x as u64) * (file.file_id as u64);
         }
     }
-    dbg!(&total);
 
     Some(total as u32)
 }
